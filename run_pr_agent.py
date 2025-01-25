@@ -1,13 +1,19 @@
+import os
+
+from dotenv import load_dotenv
 from pr_agent import cli
 from pr_agent.config_loader import get_settings
 
+load_dotenv()
+
+
 def main():
     # Fill in the following values
-    provider = "github" # github/gitlab/bitbucket/azure_devops
-    user_token = ""  # user token
-    openai_key = ""  # OpenAI key    openai_key = "..."  # OpenAI key
-    pr_url = "..."      # PR URL, for example 'https://github.com/Codium-ai/pr-agent/pull/809'
-    command = "/review" # Command to run (e.g. '/review', '/describe', '/ask="What is the purpose of this PR?"', ...)
+    provider = "github"  # github/gitlab/bitbucket/azure_devops
+    user_token = os.getenv('USER_TOKEN')  # user token
+    openai_key = os.getenv('OPENAI_KEY')  # OpenAI key
+    pr_url = os.getenv('PR_URL')  # PR URL, for example 'https://github.com/Codium-ai/pr-agent/pull/809'
+    command = '/ask [What is the purpose of this PR?]'  # Command to run (e.g. '/review', '/describe', '/ask="What is the purpose of this PR?"', ...)
 
     # Setting the configurations
     get_settings().set("CONFIG.git_provider", provider)
@@ -16,6 +22,7 @@ def main():
 
     # Run the command. Feedback will appear in GitHub PR comments
     cli.run_command(pr_url, command)
+
 
 
 if __name__ == '__main__':

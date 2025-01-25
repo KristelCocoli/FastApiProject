@@ -1,121 +1,111 @@
-
-import pygame, sys, random
+import pygame
+import sys
+import random
 
 # Colors
-BLACK = (0,0,0)
-YELLOW = (255,212,69)
-WHITE = (255,255,255)
-GRAY = (108, 100, 96)
-LIGHT_GRAY = (200,200,200)
+BACKGROUND_COLOR = (30, 30, 30)
+PLAYER_COLOR = (0, 255, 128)
+BALL_COLOR = (255, 69, 105)
+LINE_COLOR = (200, 200, 200)
+SCORE_COLOR = (255, 255, 255)
 
+# Initialization
 pygame.init()
 pygame.font.init()
 
-# h good
-screen_width, screen_height = (600, 450)
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Pong!")
+# Screen setup
+SCREEN_WIDTH, SCREEN_HEIGHT = 600, 450
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Pong Revamped!")
 clock = pygame.time.Clock()
-SCORE_FONT = pygame.font.SysFont('comicsans', 20)
+SCORE_FONT = pygame.font.SysFont('arial', 24)
 
+# Player and ball setup
+PADDLE_WIDTH, PADDLE_HEIGHT = 10, 100
+BALL_SIZE = 20
 
-# Rectangles
-player1 = pygame.Rect((10, (screen_height//2)-50),(10, 100))
-player2 = pygame.Rect((screen_width-20, (screen_height//2)-50),(10, 100))
-ball = pygame.Rect(((screen_width/2)-(20/2),(screen_height/2)-(20/2)),(20,20))
+player1 = pygame.Rect(10, (SCREEN_HEIGHT // 2) - (PADDLE_HEIGHT // 2), PADDLE_WIDTH, PADDLE_HEIGHT)
+player2 = pygame.Rect(SCREEN_WIDTH - 20, (SCREEN_HEIGHT // 2) - (PADDLE_HEIGHT // 2), PADDLE_WIDTH, PADDLE_HEIGHT)
+ball = pygame.Rect((SCREEN_WIDTH // 2) - (BALL_SIZE // 2), (SCREEN_HEIGHT // 2) - (BALL_SIZE // 2), BALL_SIZE, BALL_SIZE)
 
-# Ball speed
-num = random.randint(0,1)
-ball_speed_y = 5 if num else -5
-ball_speed_x = 5 if num else -5
+ball_speed_x = 5 * random.choice((1, -1))
+ball_speed_y = 5 * random.choice((1, -1))
+player1_score, player2_score = 0, 0
+game_active = False
 
-# Score
-player1_score = 0
-player2_score = 0
+# Functions
+def reset_ball():
+    """Reset the ball to the center."""
+    global ball_speed_x, ball_speed_y, game_active
+    ball.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+    ball_speed_x *= random.choice((1, -1))
+    ball_speed_y *= random.choice((1, -1))
+    game_active = False
 
-game = False
-
-#Functions
 def move_ball():
-	global ball_speed_x, ball_speed_y, game, player2_score, player1_score # i should've used a class for this but honestly, idc
-	ball.x += ball_speed_x
-	ball.y += ball_speed_y
+    """Move the ball and handle collisions."""
+    global ball_speed_x, ball_speed_y, player1_score, player2_score
 
-	if ball.y <= 0 or ball.y+ball.height >= screen_height:
-		ball_speed_y *= -1
-	if ball.x <= 0:
-		ball.x = (screen_width/2)-(20/2)
-		ball.y = (screen_height/2)-(20/2)
-		player2_score += 1
-		ball_speed_x *= -1
-		ball_speed_y *= -1
-		game = False
-	elif ball.x+ball.width >= screen_width:
-		ball.x = (screen_width/2)-(20/2)
-		ball.y = (screen_height/2)-(20/2)
-		player1_score += 1
-		ball_speed_x *= -1
-		ball_speed_y *= -1
-		game = False
+    ball.x += ball_speed_x
+    ball.y += ball_speed_y
 
-	if ball.colliderect(player1) and ball_speed_x < 0:
-		if abs(player1.left - ball.right) < 30:
-			ball_speed_x *= -1
-		elif abs(player1.top - ball.bottom) < 30 and ball_speed_y < 0:
-			ball_speed_y *= -1
-		elif abs(player1.bottom - ball.top) < 30 and ball_speed_y > 0:
-			ball_speed_y *= -1
-	if ball.colliderect(player2) and ball_speed_x > 0:
-		if abs(ball.right - player2.left) < 10:
-			ball_speed_x *= -1
-		elif abs(ball.bottom - player2.top) < 10 and ball_speed_y < 0:
-			ball_speed_y *= -1
-		elif abs(ball.top - player2.bottom) < 10 and ball_speed_y > 0:
-			ball_speed_y *= -1
+    # Wall collision
+    if ball.top <= 0 or ball.bottom >= SCREEN_HEIGHT:
+        ball_speed_y *= -1
+
+    # Player collision
+    if ball.colliderect(player1) or ball.colliderect(player2):
+        ball_speed_x *= -1
+
+    # Scoring
+    if ball.left <= 0:
+        player2_score += 1
+        reset_ball()
+    elif ball.right >= SCREEN_WIDTH:
+        player1_score += 1
+        reset_ball()
 
 def move_players():
-	keys_pressed = pygame.key.get_pressed()
-	if keys_pressed[pygame.K_DOWN]:
-		player2.y += 5
-		if player2.y+player2.height > screen_height:
-			player2.y = screen_height-player2.height
-	elif keys_pressed[pygame.K_UP]:
-		player2.y -= 5
-		if player2.y < 0:
-			player2.y = 0
-	if keys_pressed[pygame.K_s]:
-		player1.y += 5
-		if player1.y+player1.height > screen_height:
-			player1.y = screen_height-player1.height
-	elif keys_pressed[pygame.K_w]:
-		player1.y -= 5
-		if player1.y < 0:
-			player1.y = 0
+    """Move players based on key presses."""
+    keys = pygame.key.get_pressed()
+    # Player 1 (W, S)
+    if keys[pygame.K_w] and player1.top > 0:
+        player1.y -= 5
+    if keys[pygame.K_s] and player1.bottom < SCREEN_HEIGHT:
+        player1.y += 5
+    # Player 2 (UP, DOWN)
+    if keys[pygame.K_UP] and player2.top > 0:
+        player2.y -= 5
+    if keys[pygame.K_DOWN] and player2.bottom < SCREEN_HEIGHT:
+        player2.y += 5
 
-def draw_score():
-	score_text = SCORE_FONT.render(str(player1_score), 1, WHITE)
-	screen.blit(score_text, (10, 10))
-	score_text = SCORE_FONT.render(str(player2_score), 1, WHITE)
-	screen.blit(score_text, (screen_width-20, 10))
+def draw_elements():
+    """Draw all game elements."""
+    screen.fill(BACKGROUND_COLOR)
+    pygame.draw.rect(screen, PLAYER_COLOR, player1)
+    pygame.draw.rect(screen, PLAYER_COLOR, player2)
+    pygame.draw.ellipse(screen, BALL_COLOR, ball)
+    pygame.draw.aaline(screen, LINE_COLOR, (SCREEN_WIDTH // 2, 0), (SCREEN_WIDTH // 2, SCREEN_HEIGHT))
 
+    # Draw scores
+    p1_score_text = SCORE_FONT.render(str(player1_score), True, SCORE_COLOR)
+    p2_score_text = SCORE_FONT.render(str(player2_score), True, SCORE_COLOR)
+    screen.blit(p1_score_text, (SCREEN_WIDTH // 4, 10))
+    screen.blit(p2_score_text, (SCREEN_WIDTH * 3 // 4, 10))
 
+# Game loop
 while True:
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			pygame.quit()
-			sys.exit()
-		if not game and event.type == pygame.KEYDOWN:
-			game = True
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if not game_active and event.type == pygame.KEYDOWN:
+            game_active = True
 
-	if game:
-		move_ball()
-		move_players()
+    if game_active:
+        move_ball()
+        move_players()
 
-	screen.fill(BLACK)
-	pygame.draw.rect(screen, WHITE, player1)
-	pygame.draw.rect(screen, WHITE, player2)
-	pygame.draw.aaline(screen, WHITE, (screen_width/2-2, 0), (screen_width/2, screen_height))
-	pygame.draw.ellipse(screen, LIGHT_GRAY, ball)
-	draw_score()
-	pygame.display.update()
-	clock.tick(60)
+    draw_elements()
+    pygame.display.update()
+    clock.tick(60)
